@@ -42,3 +42,67 @@ export const signin = async (req, res, next) => {
     next(error);
   }
 };
+
+
+export const google = async (req, res, next) => {
+  try {
+    const { name, email, photo } = req.body;
+
+    // Validate input
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (user) {
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+      const { password, ...rest } = user._doc;
+      
+      return res
+        .cookie('access_token', token, { 
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict'
+        })
+        .status(200)
+        .json(rest);
+    }
+
+    // Generate a unique username
+    const generatedUsername = 
+      name.split(' ').join('').toLowerCase() + 
+      Math.random().toString(36).slice(-4);
+
+    const generatedPassword = 
+      Math.random().toString(36).slice(-8) + 
+      Math.random().toString(36).slice(-8);
+
+    const hashedPassword = bcrypt.hashSync(generatedPassword, 10);
+
+    const newUser = new User({
+      username: generatedUsername,
+      email,
+      password: hashedPassword,
+      avatar: photo
+    });
+
+    await newUser.save();
+
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET);
+    const { password, ...rest } = newUser._doc;
+
+    return res
+      .cookie('access_token', token, { 
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      })
+      .status(201)
+      .json(rest);
+
+  } catch (error) {
+    console.error('Google Auth Error:', error);
+    next(error);
+  }
+};
