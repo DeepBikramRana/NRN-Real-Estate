@@ -12,9 +12,15 @@ const userSlice = createSlice({
   reducers: {
     signInStart: (state) => {
       state.loading = true;
+      state.error = null; // Reset error on new attempt
     },
     signInSuccess: (state, action) => {
-      state.currentUser = action.payload;
+      // Preserves all existing fields while safely adding roles
+      state.currentUser = {
+        ...action.payload,
+        isAdmin: action.payload.isAdmin || false,
+        isAgent: action.payload.isAgent || false
+      };
       state.loading = false;
       state.error = null;
     },
@@ -24,9 +30,14 @@ const userSlice = createSlice({
     },
     updateUserStart: (state) => {
       state.loading = true;
+      state.error = null;
     },
     updateUserSuccess: (state, action) => {
-      state.currentUser = action.payload;
+      // Merges updates while preserving existing data
+      state.currentUser = {
+        ...state.currentUser,
+        ...action.payload
+      };
       state.loading = false;
       state.error = null;
     },
@@ -36,6 +47,7 @@ const userSlice = createSlice({
     },
     deleteUserStart: (state) => {
       state.loading = true;
+      state.error = null;
     },
     deleteUserSuccess: (state) => {
       state.currentUser = null;
@@ -48,6 +60,7 @@ const userSlice = createSlice({
     },
     signOutUserStart: (state) => {
       state.loading = true;
+      state.error = null;
     },
     signOutUserSuccess: (state) => {
       state.currentUser = null;
@@ -61,19 +74,20 @@ const userSlice = createSlice({
   },
 });
 
+// Action creators remain exactly the same
 export const {
   signInStart,
   signInSuccess,
   signInFailure,
-  updateUserFailure,
-  updateUserSuccess,
   updateUserStart,
-  deleteUserFailure,
-  deleteUserSuccess,
+  updateUserSuccess,
+  updateUserFailure,
   deleteUserStart,
-  signOutUserFailure,
-  signOutUserSuccess,
+  deleteUserSuccess,
+  deleteUserFailure,
   signOutUserStart,
+  signOutUserSuccess,
+  signOutUserFailure,
 } = userSlice.actions;
 
 export default userSlice.reducer;
