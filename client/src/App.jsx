@@ -13,6 +13,8 @@ import Search from './pages/Search';
 import Admin from './pages/Admin';
 import AdminUserEdit from './pages/AdminUserEdit';
 import PrivateAdminRoute from './components/PrivateAdminRoute';
+import AgentDashboard from './components/AgentDashboard';
+import AddAgent from './pages/AddAgent'; // Import the AddAgent component
 
 export default function App() {
   return (
@@ -25,17 +27,22 @@ export default function App() {
         <Route path='/about' element={<About />} />
         <Route path='/search' element={<Search />} />
         <Route path='/listing/:listingId' element={<Listing />} />
+        
+        {/* Regular protected routes */}
         <Route element={<PrivateRoute />}>
           <Route path='/profile' element={<Profile />} />
           <Route path='/create-listing' element={<CreateListing />} />
           <Route path='/update-listing/:listingId' element={<UpdateListing />} />
+          <Route path='/agent-dashboard' element={<AgentDashboard />} />
         </Route>
+        
+        {/* Admin-only routes */}
         <Route element={<PrivateAdminRoute />}>
           <Route path='/admin' element={<Admin />} />
           <Route path='/admin/user/:userId' element={<AdminUserEdit />} />
+          <Route path='/admin/add-agent' element={<AddAgent />} />
         </Route>
       </Routes>
-      
     </BrowserRouter>
   );
 }

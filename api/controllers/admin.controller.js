@@ -1,29 +1,76 @@
 import User from '../models/user.model.js';
 import Listing from '../models/listing.model.js';
 import { errorHandler } from '../utils/error.js';
+import bcryptjs from 'bcryptjs';
 
-export const getAdminStats = async (req, res, next) => {
+// Add a new agent
+export const addAgent = async (req, res, next) => {
   try {
-    const totalUsers = await User.countDocuments();
-    const totalListings = await Listing.countDocuments();
-    const premiumListings = await Listing.countDocuments({ 
-      regularPrice: { $gt: 1000000 } 
-    });
-    const verifiedUsers = await User.countDocuments({ 
-      emailVerified: true 
+    const { username, email, password, agentLicense, specialties } = req.body;
+
+    // Validate required fields
+    if (!username || !email || !password || !agentLicense) {
+      return next(errorHandler(400, 'Username, email, password, and agent license are required'));
+    }
+
+    // Check if the user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return next(errorHandler(400, 'User already exists'));
+    }
+
+    // Hash the password
+    const hashedPassword = bcryptjs.hashSync(password, 10);
+
+    // Create a new agent
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword,
+      isAgent: true,
+      agentLicense,
+      specialties: specialties || [],
     });
 
-    res.status(200).json({
-      totalUsers,
-      totalListings,
-      premiumListings,
-      verifiedUsers
+    await newUser.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Agent created successfully',
+      user: {
+        _id: newUser._id,
+        username: newUser.username,
+        email: newUser.email,
+        isAgent: newUser.isAgent,
+        agentLicense: newUser.agentLicense,
+        specialties: newUser.specialties,
+      },
     });
   } catch (error) {
     next(error);
   }
 };
 
+// Get admin dashboard statistics
+export const getAdminStats = async (req, res, next) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalListings = await Listing.countDocuments();
+    const premiumListings = await Listing.countDocuments({ regularPrice: { $gt: 1000000 } });
+    const verifiedUsers = await User.countDocuments({ emailVerified: true });
+
+    res.status(200).json({
+      totalUsers,
+      totalListings,
+      premiumListings,
+      verifiedUsers,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get all users (without passwords)
 export const getUsers = async (req, res, next) => {
   try {
     const users = await User.find().select('-password');
@@ -33,6 +80,7 @@ export const getUsers = async (req, res, next) => {
   }
 };
 
+// Get a specific user by ID
 export const getUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
@@ -45,6 +93,7 @@ export const getUser = async (req, res, next) => {
   }
 };
 
+// Update user info
 export const updateUser = async (req, res, next) => {
   try {
     const updatedUser = await User.findByIdAndUpdate(
@@ -69,30 +118,32 @@ export const updateUser = async (req, res, next) => {
   }
 };
 
+// Delete a user
 export const deleteUser = async (req, res, next) => {
   try {
-    // Don't allow deleting self
+    // Prevent users from deleting their own accounts
     if (req.params.id === req.user.id) {
       return next(errorHandler(400, 'You cannot delete your own account'));
     }
-    
+
     const user = await User.findById(req.params.id);
     if (!user) {
       return next(errorHandler(404, 'User not found'));
     }
 
-    // Delete all listings associated with this user
+    // Delete listings created by this user
     await Listing.deleteMany({ userRef: req.params.id });
-    
-    // Delete the user
+
+    // Delete user account
     await User.findByIdAndDelete(req.params.id);
-    
+
     res.status(200).json('User has been deleted!');
   } catch (error) {
     next(error);
   }
 };
 
+// Get all listings
 export const getListings = async (req, res, next) => {
   try {
     const listings = await Listing.find();
@@ -102,6 +153,7 @@ export const getListings = async (req, res, next) => {
   }
 };
 
+// Delete a listing
 export const deleteListing = async (req, res, next) => {
   try {
     const listing = await Listing.findById(req.params.id);

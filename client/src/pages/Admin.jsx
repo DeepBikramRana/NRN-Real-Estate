@@ -1,4 +1,3 @@
-// client/src/pages/Admin.jsx
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -7,11 +6,11 @@ export default function Admin() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
-  const [statsData, setStatsData] = useState({
-    totalUsers: 0,
-    totalListings: 0,
-    premiumListings: 0,
-    verifiedUsers: 0
+  const [statsData, setStatsData] = useState({ 
+    totalUsers: 0, 
+    totalListings: 0, 
+    premiumListings: 0, 
+    verifiedUsers: 0 
   });
 
   useEffect(() => {
@@ -28,7 +27,7 @@ export default function Admin() {
           return;
         }
         setUsers(usersData);
-
+        
         // Fetch listings
         const listingsRes = await fetch('/api/admin/listings');
         const listingsData = await listingsRes.json();
@@ -38,7 +37,7 @@ export default function Admin() {
           return;
         }
         setListings(listingsData);
-
+        
         // Fetch stats
         const statsRes = await fetch('/api/admin/stats');
         const statsData = await statsRes.json();
@@ -48,7 +47,7 @@ export default function Admin() {
           return;
         }
         setStatsData(statsData);
-
+        
         setLoading(false);
       } catch (error) {
         setError(true);
@@ -124,7 +123,15 @@ export default function Admin() {
 
           {/* Users Section */}
           <div className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">Users Management</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-semibold">Users Management</h2>
+              <Link
+                to="/admin/add-agent"
+                className="bg-blue-600 text-white p-2 rounded-lg hover:opacity-95"
+              >
+                Add New Agent
+              </Link>
+            </div>
             <div className="overflow-x-auto">
               <table className="min-w-full bg-white border border-gray-200">
                 <thead>
@@ -145,7 +152,7 @@ export default function Admin() {
                         {user.email}
                       </td>
                       <td className="py-2 px-4 border-b border-gray-200">
-                        {user.isAdmin ? 'Admin' : 'User'}
+                        {user.isAdmin ? 'Admin' : user.isAgent ? 'Agent' : 'User'}
                       </td>
                       <td className="py-2 px-4 border-b border-gray-200">
                         <button
