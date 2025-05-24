@@ -1,13 +1,6 @@
 import { useSelector } from 'react-redux';
 import { useRef, useState, useEffect } from 'react';
 import {
-  getDownloadURL,
-  getStorage,
-  ref,
-  uploadBytesResumable,
-} from 'firebase/storage';
-import { app } from '../firebase';
-import {
   updateUserStart,
   updateUserSuccess,
   updateUserFailure,
@@ -18,7 +11,7 @@ import {
 } from '../redux/user/userSlice';
 import { useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
-import UserAppointments from '../components/UserAppointments'; // Import the component
+import UserAppointments from '../components/UserAppointments';
 
 export default function Profile() {
   const fileRef = useRef(null);
@@ -30,14 +23,8 @@ export default function Profile() {
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [showListingsError, setShowListingsError] = useState(false);
   const [userListings, setUserListings] = useState([]);
-  const [showAppointments, setShowAppointments] = useState(false); // New state for appointments
+  const [showAppointments, setShowAppointments] = useState(false);
   const dispatch = useDispatch();
-
-  // firebase storage
-  // allow read;
-  // allow write: if
-  // request.resource.size < 2 * 1024 * 1024 &&
-  // request.resource.contentType.matches('image/.*')
 
   useEffect(() => {
     if (file) {
@@ -45,28 +32,90 @@ export default function Profile() {
     }
   }, [file]);
 
-  const handleFileUpload = (file) => {
-    const storage = getStorage(app);
-    const fileName = new Date().getTime() + file.name;
-    const storageRef = ref(storage, fileName);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+  const handleFileUpload = async (file) => {
+    return new Promise((resolve, reject) => {
+      setFileUploadError(false);
+      setFilePerc(0);
 
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const progress =
-          (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setFilePerc(Math.round(progress));
-      },
-      (error) => {
+      const uploadData = new FormData();
+      uploadData.append('image', file);
+
+      const xhr = new XMLHttpRequest();
+
+      // Track upload progress
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const progress = Math.round((event.loaded / event.total) * 100);
+          setFilePerc(progress);
+        }
+      });
+
+      xhr.onload = async function() {
+        if (xhr.status === 200) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            setFormData(prev => ({ ...prev, avatar: data.url }));
+            setFilePerc(100);
+            
+            // Auto-update the user profile with new avatar
+            try {
+              dispatch(updateUserStart());
+              const updateRes = await fetch(`/api/user/update/${currentUser._id}`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({ avatar: data.url }),
+              });
+              const updateData = await updateRes.json();
+              
+              if (updateData.success === false) {
+                console.error('Auto-update failed:', updateData.message);
+                dispatch(updateUserFailure(updateData.message));
+              } else {
+                dispatch(updateUserSuccess(updateData));
+                setUpdateSuccess(true);
+                setTimeout(() => setUpdateSuccess(false), 3000); // Clear success message after 3 seconds
+              }
+            } catch (updateError) {
+              console.error('Auto-update error:', updateError);
+              dispatch(updateUserFailure(updateError.message));
+            }
+            
+            resolve(data.url);
+          } catch (parseError) {
+            console.error('Error parsing response:', parseError);
+            setFileUploadError(true);
+            setFilePerc(0);
+            reject(parseError);
+          }
+        } else {
+          try {
+            const errorData = JSON.parse(xhr.responseText);
+            console.error('Server error response:', errorData);
+            setFileUploadError(true);
+            setFilePerc(0);
+            reject(new Error(errorData.message || 'Upload failed'));
+          } catch (parseError) {
+            setFileUploadError(true);
+            setFilePerc(0);
+            reject(new Error('Upload failed'));
+          }
+        }
+      };
+
+      xhr.onerror = function() {
+        console.error('Network error during upload');
         setFileUploadError(true);
-      },
-      () => {
-        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) =>
-          setFormData({ ...formData, avatar: downloadURL })
-        );
-      }
-    );
+        setFilePerc(0);
+        reject(new Error('Network error'));
+      };
+
+      xhr.open('POST', '/api/user/upload');
+      xhr.setRequestHeader('credentials', 'include');
+      xhr.send(uploadData);
+    });
   };
 
   const handleChange = (e) => {
@@ -82,6 +131,7 @@ export default function Profile() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(formData),
       });
       const data = await res.json();
@@ -102,6 +152,7 @@ export default function Profile() {
       dispatch(deleteUserStart());
       const res = await fetch(`/api/user/delete/${currentUser._id}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
       const data = await res.json();
       if (data.success === false) {
@@ -117,7 +168,9 @@ export default function Profile() {
   const handleSignOut = async () => {
     try {
       dispatch(signOutUserStart());
-      const res = await fetch('/api/auth/signout');
+      const res = await fetch('/api/auth/signout', {
+        credentials: 'include',
+      });
       const data = await res.json();
       if (data.success === false) {
         dispatch(deleteUserFailure(data.message));
@@ -125,14 +178,16 @@ export default function Profile() {
       }
       dispatch(deleteUserSuccess(data));
     } catch (error) {
-      dispatch(deleteUserFailure(data.message));
+      dispatch(deleteUserFailure(error.message));
     }
   };
 
   const handleShowListings = async () => {
     try {
       setShowListingsError(false);
-      const res = await fetch(`/api/user/listings/${currentUser._id}`);
+      const res = await fetch(`/api/user/listings/${currentUser._id}`, {
+        credentials: 'include',
+      });
       const data = await res.json();
       if (data.success === false) {
         setShowListingsError(true);
@@ -149,6 +204,7 @@ export default function Profile() {
     try {
       const res = await fetch(`/api/listing/delete/${listingId}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
       const data = await res.json();
       if (data.success === false) {
@@ -165,7 +221,7 @@ export default function Profile() {
   };
 
   return (
-    <div className='p-3 max-w-4xl mx-auto'> {/* Increased max-width for better layout */}
+    <div className='p-3 max-w-4xl mx-auto'>
       <h1 className='text-3xl font-semibold text-center my-7'>Profile</h1>
       
       {/* Profile Form Section */}
@@ -187,12 +243,12 @@ export default function Profile() {
           <p className='text-sm self-center'>
             {fileUploadError ? (
               <span className='text-red-700'>
-                Error Image upload (image must be less than 2 mb)
+                Error uploading image. Please try again.
               </span>
             ) : filePerc > 0 && filePerc < 100 ? (
               <span className='text-slate-700'>{`Uploading ${filePerc}%`}</span>
             ) : filePerc === 100 ? (
-              <span className='text-green-700'>Image successfully uploaded!</span>
+              <span className='text-green-700'>Image uploaded and profile updated!</span>
             ) : (
               ''
             )}
@@ -295,7 +351,7 @@ export default function Profile() {
                 />
               </Link>
               <Link
-                className='text-slate-700 font-semibold  hover:underline truncate flex-1'
+                className='text-slate-700 font-semibold hover:underline truncate flex-1'
                 to={`/listing/${listing._id}`}
               >
                 <p>{listing.name}</p>
