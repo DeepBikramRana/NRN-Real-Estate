@@ -1,5 +1,5 @@
 import express from 'express';
-import { 
+import {
     createListing,
     deleteListing,
     updateListing,
@@ -21,7 +21,7 @@ router.get('/featured', getFeaturedListings);
 router.get('/search', searchListings);
 
 // Protected routes
-router.post('/create', verifyToken, verifyAgent, createListing);
+router.post('/create', verifyToken, createListing); // Removed verifyAgent middleware
 router.delete('/delete/:id', verifyToken, deleteListing);
 router.post('/update/:id', verifyToken, updateListing);
 

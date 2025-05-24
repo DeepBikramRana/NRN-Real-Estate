@@ -1,25 +1,34 @@
-import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
 export default function PrivateAgentRoute() {
   const { currentUser } = useSelector((state) => state.user);
-  const navigate = useNavigate();
-  
-  // For view-only access, we allow anyone to view the content
-  // No role checking required for viewing
-  
-  useEffect(() => {
-    // If an agent or admin logs in, directly navigate them to the dashboard
-    if (currentUser && (currentUser.isAgent || currentUser.isAdmin)) {
-      // Only redirect if we're not already on the dashboard
-      // This prevents infinite redirection loops
-      if (!window.location.pathname.includes('/agent')) {
-        navigate('/agent');
-      }
-    }
-  }, [currentUser, navigate]);
+  const location = useLocation();
 
-  // Always allow access for view-only mode, no redirection to sign-in
+  // Define agent-specific route prefixes
+  const agentRoutePrefixes = ['/agent-dashboard', '/agent/appointments'];
+  const isAgentRoute = agentRoutePrefixes.some(prefix => location.pathname.startsWith(prefix));
+
+  // Public routes that don't require agent privileges
+  if (!isAgentRoute) {
+    return <Outlet />;
+  }
+
+  // Authentication check - if not logged in, redirect to sign-in
+  if (!currentUser) {
+    return <Navigate to="/sign-in" state={{ from: location }} replace />;
+  }
+
+  // If user is admin, redirect them to admin dashboard
+  if (currentUser.isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  // If not an agent (and not admin since we already checked), redirect to home
+  if (!currentUser.isAgent) {
+    return <Navigate to="/" state={{ from: location }} replace />;
+  }
+
+  // User is an agent and trying to access agent routes - allow access
   return <Outlet />;
 }

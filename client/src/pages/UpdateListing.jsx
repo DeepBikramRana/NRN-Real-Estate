@@ -1,15 +1,8 @@
 import { useEffect, useState } from 'react';
-import {
-  getDownloadURL,
-  getStorage,
-  ref,
-  uploadBytesResumable,
-} from 'firebase/storage';
-import { app } from '../firebase';
 import { useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 
-export default function CreateListing() {
+export default function UpdateListing() {
   const { currentUser } = useSelector((state) => state.user);
   const navigate = useNavigate();
   const params = useParams();
@@ -36,19 +29,27 @@ export default function CreateListing() {
   useEffect(() => {
     const fetchListing = async () => {
       const listingId = params.listingId;
-      const res = await fetch(`/api/listing/get/${listingId}`);
-      const data = await res.json();
-      if (data.success === false) {
-        console.log(data.message);
-        return;
+      if (!listingId) return;
+      
+      try {
+        const res = await fetch(`/api/listing/get/${listingId}`);
+        const data = await res.json();
+        if (data.success === false) {
+          console.log(data.message);
+          setError(data.message);
+          return;
+        }
+        setFormData(data);
+      } catch (error) {
+        console.log('Error fetching listing:', error);
+        setError('Failed to fetch listing data');
       }
-      setFormData(data);
     };
 
     fetchListing();
-  }, []);
+  }, [params.listingId]);
 
-  const handleImageSubmit = (e) => {
+  const handleImageSubmit = async (e) => {
     if (files.length > 0 && files.length + formData.imageUrls.length < 7) {
       setUploading(true);
       setImageUploadError(false);
@@ -57,8 +58,10 @@ export default function CreateListing() {
       for (let i = 0; i < files.length; i++) {
         promises.push(storeImage(files[i]));
       }
+
       Promise.all(promises)
         .then((urls) => {
+          console.log('Upload successful, URLs:', urls);
           setFormData({
             ...formData,
             imageUrls: formData.imageUrls.concat(urls),
@@ -67,7 +70,8 @@ export default function CreateListing() {
           setUploading(false);
         })
         .catch((err) => {
-          setImageUploadError('Image upload failed (2 mb max per image)');
+          console.error('Upload failed:', err);
+          setImageUploadError(err.message || 'Image upload failed');
           setUploading(false);
         });
     } else {
@@ -77,28 +81,29 @@ export default function CreateListing() {
   };
 
   const storeImage = async (file) => {
-    return new Promise((resolve, reject) => {
-      const storage = getStorage(app);
-      const fileName = new Date().getTime() + file.name;
-      const storageRef = ref(storage, fileName);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress =
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          console.log(`Upload is ${progress}% done`);
-        },
-        (error) => {
-          reject(error);
-        },
-        () => {
-          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-            resolve(downloadURL);
-          });
-        }
-      );
-    });
+    console.log(`File size: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch('/api/user/upload', {
+        method: 'POST',
+        credentials: 'include', // Include cookies for authentication
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Server error response:', errorData);
+        throw new Error(errorData.message || 'Image upload failed');
+      }
+
+      const data = await response.json();
+      return data.url;
+    } catch (error) {
+      console.error('Image upload exception:', error);
+      throw error;
+    }
   };
 
   const handleRemoveImage = (index) => {
@@ -148,27 +153,34 @@ export default function CreateListing() {
         return setError('Discount price must be lower than regular price');
       setLoading(true);
       setError(false);
+      
       const res = await fetch(`/api/listing/update/${params.listingId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Add credentials for authentication
         body: JSON.stringify({
           ...formData,
           userRef: currentUser._id,
         }),
       });
+      
       const data = await res.json();
       setLoading(false);
+      
       if (data.success === false) {
         setError(data.message);
+        return;
       }
+      
       navigate(`/listing/${data._id}`);
     } catch (error) {
       setError(error.message);
       setLoading(false);
     }
   };
+
   return (
     <main className='p-3 max-w-4xl mx-auto'>
       <h1 className='text-3xl font-semibold text-center my-7'>

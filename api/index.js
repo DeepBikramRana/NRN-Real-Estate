@@ -8,7 +8,9 @@ import adminRouter from './routes/admin.route.js';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import cors from 'cors'; // Added for better API accessibility
+import cors from 'cors';
+import appointmentRouter from './routes/appointment.route.js';
+import agentRouter from './routes/agent.route.js';
 
 // Configuration
 dotenv.config();
@@ -39,21 +41,30 @@ app.use('/api/user', userRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/listing', listingRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/appointment', appointmentRouter);
+app.use('/api/agent', agentRouter);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'client', 'dist')));
   
-  // Handle React routing
+  // Handle React routing for GET requests only
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'client', 'dist', 'index.html'));
   });
 } else {
-  // Development route for testing
   app.get('/', (req, res) => {
     res.json({ message: 'API is running in development mode' });
   });
 }
+
+// Catch-all for unsupported methods or routes
+app.all('*', (req, res, next) => {
+  next({
+    statusCode: 404,
+    message: `Cannot ${req.method} ${req.originalUrl}`,
+  });
+});
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

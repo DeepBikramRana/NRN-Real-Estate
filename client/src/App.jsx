@@ -13,14 +13,17 @@ import Search from './pages/Search';
 import Admin from './pages/Admin';
 import AdminUserEdit from './pages/AdminUserEdit';
 import PrivateAdminRoute from './components/PrivateAdminRoute';
+import PrivateAgentRoute from './components/PrivateAgentRoute';
 import AgentDashboard from './components/AgentDashboard';
-import AddAgent from './pages/AddAgent'; // Import the AddAgent component
+import AddAgent from './pages/AddAgent';
+import AgentAppointments from './pages/AgentAppointments'; // New component
 
 export default function App() {
   return (
     <BrowserRouter>
       <Header />
       <Routes>
+        {/* Public routes */}
         <Route path='/' element={<Home />} />
         <Route path='/sign-in' element={<SignIn />} />
         <Route path='/sign-up' element={<SignUp />} />
@@ -28,12 +31,17 @@ export default function App() {
         <Route path='/search' element={<Search />} />
         <Route path='/listing/:listingId' element={<Listing />} />
         
-        {/* Regular protected routes */}
+        {/* Regular protected routes (authenticated users) */}
         <Route element={<PrivateRoute />}>
           <Route path='/profile' element={<Profile />} />
           <Route path='/create-listing' element={<CreateListing />} />
           <Route path='/update-listing/:listingId' element={<UpdateListing />} />
+        </Route>
+        
+        {/* Agent-only routes */}
+        <Route element={<PrivateAgentRoute />}>
           <Route path='/agent-dashboard' element={<AgentDashboard />} />
+          <Route path='/agent/appointments' element={<AgentAppointments />} />
         </Route>
         
         {/* Admin-only routes */}

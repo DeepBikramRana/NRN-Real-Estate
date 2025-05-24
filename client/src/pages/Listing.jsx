@@ -13,10 +13,11 @@ import {
   FaMapMarkerAlt,
   FaParking,
   FaShare,
+  FaUserTie,
+  FaCalendarAlt,
 } from 'react-icons/fa';
 import Contact from '../components/Contact';
-
-// https://sabe.io/blog/javascript-format-numbers-commas#:~:text=The%20best%20way%20to%20format,format%20the%20number%20with%20commas.
+import AppointmentBooking from '../components/AppointmentBooking';
 
 export default function Listing() {
   SwiperCore.use([Navigation]);
@@ -24,14 +25,20 @@ export default function Listing() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [contact, setContact] = useState(false); 
+  const [contact, setContact] = useState(false);
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  const [agents, setAgents] = useState([]);
+  const [agentsLoading, setAgentsLoading] = useState(false);
+  const [agentsError, setAgentsError] = useState(null);
   const params = useParams();
-  const {currentUser} = useSelector((state) => state.user);
+  const { currentUser } = useSelector((state) => state.user);
 
   useEffect(() => {
-    const fetchListing = async () => {
+    const fetchListingAndAgents = async () => {
       try {
         setLoading(true);
+        
+        // Fetch listing
         const res = await fetch(`/api/listing/get/${params.listingId}`);
         const data = await res.json();
         if (data.success === false) {
@@ -40,14 +47,50 @@ export default function Listing() {
           return;
         }
         setListing(data);
+
+        // Fetch agents with better error handling
+        setAgentsLoading(true);
+        setAgentsError(null);
+        
+        try {
+          const agentsRes = await fetch('/api/user/agents');
+          
+          // Check if the response is ok
+          if (!agentsRes.ok) {
+            throw new Error(`HTTP error! status: ${agentsRes.status}`);
+          }
+          
+          const agentsData = await agentsRes.json();
+          
+          // Handle different response structures
+          if (agentsData.success === false) {
+            setAgentsError(agentsData.message || 'Failed to fetch agents');
+          } else {
+            // Check if agentsData is an array or has a data property
+            const agentsList = Array.isArray(agentsData) ? agentsData : 
+                              (agentsData.data && Array.isArray(agentsData.data)) ? agentsData.data :
+                              (agentsData.agents && Array.isArray(agentsData.agents)) ? agentsData.agents : [];
+            
+            setAgents(agentsList);
+          }
+        } catch (agentsError) {
+          console.error('Error fetching agents:', agentsError);
+          setAgentsError(agentsError.message);
+        } finally {
+          setAgentsLoading(false);
+        }
+
         setLoading(false);
         setError(false);
       } catch (error) {
+        console.error('Error in fetchListingAndAgents:', error);
         setError(true);
         setLoading(false);
+        setAgentsLoading(false);
       }
     };
-    fetchListing();
+    
+    fetchListingAndAgents();
   }, [params.listingId]);
 
   return (
@@ -136,12 +179,41 @@ export default function Listing() {
                 {listing.furnished ? 'Furnished' : 'Unfurnished'}
               </li>
             </ul>
+            
+            {/* Keep existing contact landlord button */}
             {currentUser && listing.userRef !== currentUser._id && !contact && (
               <button onClick={()=>setContact(true)} className='bg-slate-700 text-white rounded-lg uppercase hover:opacity-95 p-3'>
                 Contact landlord
               </button>
             )}
             {contact && <Contact listing={listing}/>}
+            
+            {/* Add new appointment booking button with loading state */}
+            {currentUser && listing.userRef !== currentUser._id && !showAppointmentForm && (
+              <button 
+                onClick={() => setShowAppointmentForm(true)} 
+                className='bg-blue-600 text-white rounded-lg uppercase hover:opacity-95 p-3 flex items-center justify-center gap-2'
+                disabled={agentsLoading}
+              >
+                <FaCalendarAlt />
+                {agentsLoading ? 'Loading Agents...' : 'Book Appointment with Agent'}
+              </button>
+            )}
+            
+            {/* Show agents error if any */}
+            {agentsError && (
+              <div className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded'>
+                Error loading agents: {agentsError}
+              </div>
+            )}
+            
+            {showAppointmentForm && (
+              <AppointmentBooking 
+                listing={listing} 
+                agents={agents} 
+                onClose={() => setShowAppointmentForm(false)} 
+              />
+            )}
           </div>
         </div>
       )}

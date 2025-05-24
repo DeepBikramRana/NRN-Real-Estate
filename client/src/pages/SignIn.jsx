@@ -44,9 +44,25 @@ export default function SignIn() {
         dispatch(signInFailure(data.message || 'Sign-in failed'));
         return;
       }
-      
+
+      // Sync cookie token to localStorage
+      document.cookie.split('; ').forEach(cookie => {
+        if (cookie.startsWith('access_token=')) {
+          const token = cookie.split('=')[1];
+          localStorage.setItem('access_token', token);
+        }
+      });
+
       dispatch(signInSuccess(data));
-      navigate('/');
+      
+      // Redirect based on user role
+      if (data.isAdmin) {
+        navigate('/admin');
+      } else if (data.isAgent) {
+        navigate('/agent-dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       dispatch(signInFailure(error.message || 'Something went wrong'));
     }
