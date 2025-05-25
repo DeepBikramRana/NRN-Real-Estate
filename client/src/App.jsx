@@ -17,6 +17,7 @@ import PrivateAgentRoute from './components/PrivateAgentRoute';
 import AgentDashboard from './components/AgentDashboard';
 import AddAgent from './pages/AddAgent';
 import AgentAppointments from './pages/AgentAppointments'; // New component
+import ForgotPassword from './pages/ForgotPassword';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
         <Route path='/about' element={<About />} />
         <Route path='/search' element={<Search />} />
         <Route path='/listing/:listingId' element={<Listing />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         
         {/* Regular protected routes (authenticated users) */}
         <Route element={<PrivateRoute />}>

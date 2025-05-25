@@ -415,13 +415,13 @@ export default function AgentDashboard() {
                       </button>
                     )}
 
-                    <button
+                    {/* <button
                       onClick={() => window.location.href = `/appointment/${appointment._id}`}
                       className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200 flex items-center justify-center"
                     >
                       <FaEye className="mr-2" />
                       View Details
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               </div>

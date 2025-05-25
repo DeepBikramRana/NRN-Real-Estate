@@ -6,7 +6,9 @@ import {
   updateAppointmentStatus,
   cancelAppointment,
   getAppointmentById,
-  getAllAppointments
+  getAllAppointments,
+  verifyQRPayment,
+  getReceipt
 } from '../controllers/appointment.controller.js';
 import { verifyToken } from '../utils/verifyUser.js';
 import { validateAppointment } from '../middleware/validateAppointment.js';
@@ -28,8 +30,14 @@ router.get('/all', verifyToken, getAllAppointments);
 // Get specific appointment details
 router.get('/:id', verifyToken, getAppointmentById);
 
+// Get receipt for appointment
+router.get('/:id/receipt', verifyToken, getReceipt);
+
 // Update appointment status (agent/admin only)
 router.put('/:id/status', verifyToken, updateAppointmentStatus);
+
+// Verify QR payment (agent/admin only)
+router.put('/:id/verify-payment', verifyToken, verifyQRPayment);
 
 // Cancel appointment
 router.put('/:id/cancel', verifyToken, cancelAppointment);

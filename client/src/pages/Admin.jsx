@@ -90,138 +90,137 @@ export default function Admin() {
   };
 
   return (
-    <div className="p-3 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-semibold text-center my-7">Admin Dashboard</h1>
-      {loading && <p className="text-xl text-center">Loading...</p>}
-      {error && (
-        <p className="text-red-700 text-center text-xl">
-          Error! Only admins can access this page
-        </p>
-      )}
+    <div className="bg-gray-50 text-gray-800 min-h-screen">
+      <main className="max-w-7xl mx-auto p-6">
+        <h1 className="text-4xl font-bold text-center my-12">Admin Dashboard</h1>
+        
+        {loading && <p className="text-xl text-center py-8">Loading...</p>}
+        {error && (
+          <p className="text-red-600 text-center text-xl py-8">
+            Error! Only admins can access this page
+          </p>
+        )}
 
-      {!loading && !error && (
-        <div>
-          {/* Stats Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div className="bg-slate-100 p-4 rounded-lg shadow-md">
-              <h3 className="font-semibold text-lg">Total Users</h3>
-              <p className="text-3xl font-bold">{statsData.totalUsers}</p>
-            </div>
-            <div className="bg-slate-100 p-4 rounded-lg shadow-md">
-              <h3 className="font-semibold text-lg">Total Listings</h3>
-              <p className="text-3xl font-bold">{statsData.totalListings}</p>
-            </div>
-            <div className="bg-slate-100 p-4 rounded-lg shadow-md">
-              <h3 className="font-semibold text-lg">Premium Listings</h3>
-              <p className="text-3xl font-bold">{statsData.premiumListings}</p>
-            </div>
-            <div className="bg-slate-100 p-4 rounded-lg shadow-md">
-              <h3 className="font-semibold text-lg">Verified Users</h3>
-              <p className="text-3xl font-bold">{statsData.verifiedUsers}</p>
-            </div>
-          </div>
+        {!loading && !error && (
+          <div className="space-y-12">
+            {/* Stats Section */}
+            <section className="bg-black text-white py-8 rounded-xl">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div className="p-4">
+                  <p className="text-3xl md:text-4xl font-bold mb-2">{statsData.totalUsers}</p>
+                  <p className="text-gray-300">Total Users</p>
+                </div>
+                <div className="p-4">
+                  <p className="text-3xl md:text-4xl font-bold mb-2">{statsData.totalListings}</p>
+                  <p className="text-gray-300">Total Listings</p>
+                </div>
+                <div className="p-4">
+                  <p className="text-3xl md:text-4xl font-bold mb-2">{statsData.premiumListings}</p>
+                  <p className="text-gray-300">Premium Listings</p>
+                </div>
+                <div className="p-4">
+                  <p className="text-3xl md:text-4xl font-bold mb-2">{statsData.verifiedUsers}</p>
+                  <p className="text-gray-300">Verified Users</p>
+                </div>
+              </div>
+            </section>
 
-          {/* Users Section */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-semibold">Users Management</h2>
-              <Link
-                to="/admin/add-agent"
-                className="bg-blue-600 text-white p-2 rounded-lg hover:opacity-95"
-              >
-                Add New Agent
-              </Link>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border border-gray-200">
-                <thead>
-                  <tr>
-                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left">Username</th>
-                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left">Email</th>
-                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left">Role</th>
-                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user._id}>
-                      <td className="py-2 px-4 border-b border-gray-200">
-                        {user.username}
-                      </td>
-                      <td className="py-2 px-4 border-b border-gray-200">
-                        {user.email}
-                      </td>
-                      <td className="py-2 px-4 border-b border-gray-200">
-                        {user.isAdmin ? 'Admin' : user.isAgent ? 'Agent' : 'User'}
-                      </td>
-                      <td className="py-2 px-4 border-b border-gray-200">
-                        <button
-                          onClick={() => handleDeleteUser(user._id)}
-                          className="bg-red-700 text-white p-1 rounded-lg uppercase hover:opacity-95 mr-2"
-                        >
-                          Delete
-                        </button>
-                        <Link
-                          to={`/admin/user/${user._id}`}
-                          className="bg-green-700 text-white p-1 rounded-lg uppercase hover:opacity-95"
-                        >
-                          Edit
-                        </Link>
-                      </td>
+            {/* Users Section */}
+            <section className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Users Management</h2>
+                <Link
+                  to="/admin/add-agent"
+                  className="bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition"
+                >
+                  Add New Agent
+                </Link>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-6 py-3 text-left">Username</th>
+                      <th className="px-6 py-3 text-left">Email</th>
+                      <th className="px-6 py-3 text-left">Role</th>
+                      <th className="px-6 py-3 text-left">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {users.map((user) => (
+                      <tr key={user._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">{user.username}</td>
+                        <td className="px-6 py-4">{user.email}</td>
+                        <td className="px-6 py-4">
+                          {user.isAdmin ? 'Admin' : user.isAgent ? 'Agent' : 'User'}
+                        </td>
+                        <td className="px-6 py-4 space-x-2">
+                          <button
+                            onClick={() => handleDeleteUser(user._id)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            Delete
+                          </button>
+                          <Link
+                            to={`/admin/user/${user._id}`}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            Edit
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
 
-          {/* Listings Section */}
-          <div>
-            <h2 className="text-2xl font-semibold mb-4">Listings Management</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border border-gray-200">
-                <thead>
-                  <tr>
-                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left">Title</th>
-                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left">Price</th>
-                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left">Created By</th>
-                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {listings.map((listing) => (
-                    <tr key={listing._id}>
-                      <td className="py-2 px-4 border-b border-gray-200">
-                        {listing.name}
-                      </td>
-                      <td className="py-2 px-4 border-b border-gray-200">
-                        ${listing.regularPrice.toLocaleString('en-US')}
-                      </td>
-                      <td className="py-2 px-4 border-b border-gray-200">
-                        {listing.userRef}
-                      </td>
-                      <td className="py-2 px-4 border-b border-gray-200">
-                        <button
-                          onClick={() => handleDeleteListing(listing._id)}
-                          className="bg-red-700 text-white p-1 rounded-lg uppercase hover:opacity-95 mr-2"
-                        >
-                          Delete
-                        </button>
-                        <Link
-                          to={`/listing/${listing._id}`}
-                          className="bg-green-700 text-white p-1 rounded-lg uppercase hover:opacity-95"
-                        >
-                          View
-                        </Link>
-                      </td>
+            {/* Listings Section */}
+            <section className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+              <h2 className="text-2xl font-bold mb-6">Listings Management</h2>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-6 py-3 text-left">Title</th>
+                      <th className="px-6 py-3 text-left">Price</th>
+                      <th className="px-6 py-3 text-left">Created By</th>
+                      <th className="px-6 py-3 text-left">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {listings.map((listing) => (
+                      <tr key={listing._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">{listing.name}</td>
+                        <td className="px-6 py-4">
+                          ${listing.regularPrice.toLocaleString('en-US')}
+                        </td>
+                        <td className="px-6 py-4">{listing.userRef}</td>
+                        <td className="px-6 py-4 space-x-2">
+                          <button
+                            onClick={() => handleDeleteListing(listing._id)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            Delete
+                          </button>
+                          <Link
+                            to={`/listing/${listing._id}`}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            View
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
           </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   );
 }

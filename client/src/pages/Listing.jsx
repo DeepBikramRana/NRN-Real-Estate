@@ -16,7 +16,6 @@ import {
   FaUserTie,
   FaCalendarAlt,
 } from 'react-icons/fa';
-import Contact from '../components/Contact';
 import AppointmentBooking from '../components/AppointmentBooking';
 
 export default function Listing() {
@@ -25,7 +24,6 @@ export default function Listing() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [contact, setContact] = useState(false);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [agents, setAgents] = useState([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
@@ -179,14 +177,6 @@ export default function Listing() {
                 {listing.furnished ? 'Furnished' : 'Unfurnished'}
               </li>
             </ul>
-            
-            {/* Keep existing contact landlord button */}
-            {currentUser && listing.userRef !== currentUser._id && !contact && (
-              <button onClick={()=>setContact(true)} className='bg-slate-700 text-white rounded-lg uppercase hover:opacity-95 p-3'>
-                Contact landlord
-              </button>
-            )}
-            {contact && <Contact listing={listing}/>}
             
             {/* Add new appointment booking button with loading state */}
             {currentUser && listing.userRef !== currentUser._id && !showAppointmentForm && (

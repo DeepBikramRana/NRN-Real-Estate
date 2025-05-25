@@ -6,11 +6,25 @@ import { errorHandler } from '../utils/error.js';
 // Create new appointment
 export const createAppointment = async (req, res, next) => {
   try {
-    const { property, agent, date, time, message, clientInfo, propertyAddress } = req.body;
+    const { property, agent, date, time, message, clientInfo, propertyAddress, payment } = req.body;
 
     // Validate required fields
-    if (!property || !agent || !date || !time || !clientInfo) {
+    if (!property || !agent || !date || !time || !clientInfo || !payment) {
       return next(errorHandler(400, 'Missing required fields'));
+    }
+
+    // Validate payment information
+    if (!payment.method || !['cash', 'qr'].includes(payment.method)) {
+      return next(errorHandler(400, 'Invalid payment method'));
+    }
+
+    if (!payment.amount || payment.amount <= 0) {
+      return next(errorHandler(400, 'Payment amount is required'));
+    }
+
+    // For QR payments, customer email is required
+    if (payment.method === 'qr' && (!payment.qrDetails || !payment.qrDetails.customerEmail)) {
+      return next(errorHandler(400, 'Customer email is required for QR payments'));
     }
 
     // Verify the agent exists and is actually an agent
@@ -37,6 +51,9 @@ export const createAppointment = async (req, res, next) => {
       return next(errorHandler(400, 'Agent is not available at this time'));
     }
 
+    // Set payment status based on method
+    const paymentStatus = payment.method === 'cash' ? 'verified' : 'pending';
+
     const appointment = new Appointment({
       property,
       agent,
@@ -46,7 +63,15 @@ export const createAppointment = async (req, res, next) => {
       message: message || '',
       clientInfo,
       propertyAddress: propertyAddress || propertyExists.address,
-      status: 'pending'
+      status: 'pending',
+      payment: {
+        method: payment.method,
+        status: paymentStatus,
+        amount: payment.amount,
+        qrDetails: payment.method === 'qr' ? {
+          customerEmail: payment.qrDetails.customerEmail
+        } : undefined
+      }
     });
 
     await appointment.save();
@@ -59,8 +84,109 @@ export const createAppointment = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: 'Appointment requested successfully',
+      message: payment.method === 'cash' 
+        ? 'Appointment booked successfully! Payment will be collected in office.'
+        : 'Appointment requested successfully! Please complete the QR payment.',
       appointment: populatedAppointment
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Verify QR payment (agent only)
+export const verifyQRPayment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { transactionId } = req.body;
+
+    if (!req.user.isAgent && !req.user.isAdmin) {
+      return next(errorHandler(403, 'Access denied. Agent privileges required.'));
+    }
+
+    const appointment = await Appointment.findById(id);
+    if (!appointment) {
+      return next(errorHandler(404, 'Appointment not found'));
+    }
+
+    if (appointment.payment.method !== 'qr') {
+      return next(errorHandler(400, 'This appointment does not use QR payment'));
+    }
+
+    if (appointment.payment.status === 'verified') {
+      return next(errorHandler(400, 'Payment already verified'));
+    }
+
+    // Update payment status
+    appointment.payment.status = 'verified';
+    appointment.payment.qrDetails.transactionId = transactionId;
+    appointment.payment.qrDetails.paymentDate = new Date();
+    appointment.payment.qrDetails.verifiedBy = req.user.id;
+    appointment.payment.qrDetails.verificationDate = new Date();
+
+    await appointment.save();
+
+    const updatedAppointment = await Appointment.findById(id)
+      .populate('property', 'name regularPrice address imageUrls type')
+      .populate('client', 'username email avatar')
+      .populate('agent', 'username email avatar');
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment verified successfully! Receipt generated.',
+      appointment: updatedAppointment
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get receipt data
+export const getReceipt = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    
+    const appointment = await Appointment.findById(id)
+      .populate('property', 'name regularPrice address imageUrls type')
+      .populate('client', 'username email avatar')
+      .populate('agent', 'username email avatar')
+      .populate('payment.qrDetails.verifiedBy', 'username email');
+
+    if (!appointment) {
+      return next(errorHandler(404, 'Appointment not found'));
+    }
+
+    // Check if user is involved in this appointment or is admin
+    const isAuthorized = 
+      appointment.client._id.toString() === req.user.id ||
+      appointment.agent._id.toString() === req.user.id ||
+      req.user.isAdmin;
+
+    if (!isAuthorized) {
+      return next(errorHandler(403, 'Access denied'));
+    }
+
+    if (appointment.payment.status !== 'verified' || !appointment.receipt.downloadable) {
+      return next(errorHandler(400, 'Receipt not available'));
+    }
+
+    res.status(200).json({
+      success: true,
+      receipt: {
+        receiptNumber: appointment.receipt.receiptNumber,
+        generatedDate: appointment.receipt.generatedDate,
+        appointment: {
+          id: appointment._id,
+          date: appointment.date,
+          time: appointment.time,
+          property: appointment.property,
+          agent: appointment.agent,
+          client: appointment.clientInfo,
+          payment: appointment.payment
+        }
+      }
     });
 
   } catch (error) {
@@ -75,12 +201,17 @@ export const getAgentAppointments = async (req, res, next) => {
       return next(errorHandler(403, 'Access denied. Agent privileges required.'));
     }
 
-    const { status, date, page = 1, limit = 10 } = req.query;
+    const { status, paymentStatus, date, page = 1, limit = 10 } = req.query;
     let query = { agent: req.user.id };
 
     // Add status filter if provided
     if (status && ['pending', 'confirmed', 'canceled', 'completed'].includes(status)) {
       query.status = status;
+    }
+
+    // Add payment status filter if provided
+    if (paymentStatus && ['pending', 'verified', 'failed'].includes(paymentStatus)) {
+      query['payment.status'] = paymentStatus;
     }
 
     // Add date filter if provided
@@ -259,11 +390,15 @@ export const getAllAppointments = async (req, res, next) => {
       return next(errorHandler(403, 'Admin access required'));
     }
 
-    const { status, page = 1, limit = 10 } = req.query;
+    const { status, paymentStatus, page = 1, limit = 10 } = req.query;
     let query = {};
 
     if (status && ['pending', 'confirmed', 'canceled', 'completed'].includes(status)) {
       query.status = status;
+    }
+
+    if (paymentStatus && ['pending', 'verified', 'failed'].includes(paymentStatus)) {
+      query['payment.status'] = paymentStatus;
     }
 
     const skip = (page - 1) * limit;
