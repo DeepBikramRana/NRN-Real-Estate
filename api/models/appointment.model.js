@@ -58,28 +58,30 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    // Payment information
+    // Payment information - Made optional
     payment: {
       method: {
         type: String,
         enum: ['cash', 'qr'],
-        required: true,
+        required: false,
+        default: 'cash' // Default to cash
       },
       status: {
         type: String,
         enum: ['pending', 'verified', 'failed'],
-        default: 'pending',
+        default: 'verified', // Default to verified for cash payments
       },
       amount: {
         type: Number,
-        required: true,
+        required: false,
+        default: 100 // Default consultation fee
       },
       // For QR payments
       qrDetails: {
         customerEmail: {
           type: String,
           required: function() {
-            return this.payment.method === 'qr';
+            return this.payment && this.payment.method === 'qr';
           }
         },
         transactionId: String,
@@ -112,7 +114,10 @@ appointmentSchema.index({ 'payment.status': 1 });
 
 // Pre-save middleware to generate receipt number
 appointmentSchema.pre('save', function(next) {
-  if (this.payment.status === 'verified' && !this.receipt.receiptNumber) {
+  // Generate receipt for verified payments or cash payments
+  if (this.payment && 
+      (this.payment.status === 'verified' || this.payment.method === 'cash') && 
+      !this.receipt.receiptNumber) {
     this.receipt.receiptNumber = `RCP-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
     this.receipt.generatedDate = new Date();
     this.receipt.downloadable = true;
